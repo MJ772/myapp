@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Rules for the users collection
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rules for the repair_requests collection
+    match /repair_requests/{requestId} {
+      allow read, create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Rules for the bids collection
+    match /bids/{bidId} {
+      allow read, create: if request.auth != null;
+    }
+
+    // Rules for the services collection
+    match /services/{serviceId} {
+      allow read: if request.auth != null;
+    }
+  }
+}
