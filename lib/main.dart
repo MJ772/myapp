@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:myapp/firebase_options.dart';
-import 'package:myapp/screens/auth_screen.dart';
+import 'package:myapp/screens/auth/auth_screen.dart';
 // import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Keep this import for Firestore
-import 'package:myapp/screens/garage_dashboard.dart';
+import 'package:myapp/screens/vendor/garage_dashboard.dart';
 import 'package:cloud_functions/cloud_functions.dart'; // Keep this import for Functions
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:myapp/screens/customer_submission_screen.dart';
+import 'package:myapp/screens/customer/customer_submission_screen.dart';
 import 'package:myapp/screens/repair_request_details_screen.dart';
 import 'package:flutter/foundation.dart'; // Comment out Firebase Messaging import
 
@@ -48,16 +48,21 @@ Future<void> main() async {
 
     // Connect to Firebase emulators
     try {
+      const emulatorHost = '10.0.2.2'; // Define emulator host constant
+      
       // Ensure you use the correct Firestore port from your emulator logs (8080 or 8082)
-      FirebaseFirestore.instance.useFirestoreEmulator('10.0.2.2', 8080);
+      FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, 8080);
       // Use the correct Auth port from your emulator logs (usually 9099)
-      await FirebaseAuth.instance.useAuthEmulator('10.0.2.2', 9099);
-      // Use the correct Functions port from your emulator logs (usually 5001 or 5002)
-      FirebaseFunctions.instance.useFunctionsEmulator('10.0.2.2', 5002); // This line is correctly placed and configured
+      await FirebaseAuth.instance.useAuthEmulator(emulatorHost, 9099);
+      // Use the correct Functions port from your emulator logs (usually 5001)
+      FirebaseFunctions.instance.useFunctionsEmulator(emulatorHost, 5001);
+      // Add this line for regional function instances
+      FirebaseFunctions.instanceFor(region: 'us-central1').useFunctionsEmulator(emulatorHost, 5001);
+      
       debugPrint('Connected to Firebase Emulators.');
 
       // *** Add the call to the new function here within the emulator block ***
-       await _ensureGarageUserDataExists(); // Call the function to create user data if needed
+      await _ensureGarageUserDataExists(); // Call the function to create user data if needed
 
     } catch (e) {
       // Catching exceptions for emulators that might not be running

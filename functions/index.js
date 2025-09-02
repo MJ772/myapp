@@ -1,17 +1,21 @@
+
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const {initializeApp} = require("firebase-admin/app");
 
 // Initialize Firebase Admin SDK
-initializeApp();
+admin.initializeApp();
 
-// Removed the global Stripe initialization here.
-// The Stripe object will now be initialized inside each function.
+// Securely initialize Stripe
+// This looks for the key in your Firebase environment configuration
+// You must set this using the Firebase CLI: 
+// firebase functions:config:set stripe.secret="sk_test_..."
+const stripe = require('stripe')(functions.config().stripe.secret);
 
 
 // Define acceptBidAndProcessPayment function
 const acceptBidAndProcessPaymentFunction = functions.https.onCall(
     async (data, context) => {
+      // ... (rest of the function remains the same)
       // Validate authentication
       if (!context.auth) {
         throw new functions.https.HttpsError(
@@ -32,9 +36,6 @@ const acceptBidAndProcessPaymentFunction = functions.https.onCall(
       }
 
       try {
-        // Initialize Stripe inside the function where it's needed
-        const stripe = require("stripe")(functions.config().stripe.secret);
-
         const db = admin.firestore();
         const batch = db.batch();
 
@@ -180,9 +181,6 @@ const initiateStripeConnectOnboardingFunction = functions.https.onCall(
       try {
         console.log(`[initiateStripeConnectOnboarding] Function started for user: ${userId}`);
 
-        // Initialize Stripe inside the function where it's needed
-        const stripe = require("stripe")(functions.config().stripe.secret);
-
         const db = admin.firestore();
 
         // Check user role
@@ -262,3 +260,11 @@ const initiateStripeConnectOnboardingFunction = functions.https.onCall(
 // Export the functions
 exports.acceptBidAndProcessPayment = acceptBidAndProcessPaymentFunction;
 exports.initiateStripeConnectOnboarding = initiateStripeConnectOnboardingFunction;
+
+// Export admin functions
+const adminFunctions = require('./admin_functions');
+exports.setAdmin = adminFunctions.setAdmin;
+
+// Export temporary admin function
+const tempAdminFunctions = require('./temp_admin');
+exports.makeFirstAdmin = tempAdminFunctions.makeFirstAdmin;

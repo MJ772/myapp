@@ -162,7 +162,7 @@ class _GarageDashboardState extends State<GarageDashboard> {
     try {
       // Get the user's ID token explicitly (this line can be kept for debugging or other purposes,
       // but the token should NOT be passed in the callable function payload for authentication)
-      final idToken = await user.getIdToken();
+     // final idToken = await user.getIdToken();
       developer.log('User ID Token obtained');
 
       // Call the callable function.

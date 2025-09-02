@@ -1,0 +1,94 @@
+{
+    "vehicle_hire_contract": {
+      "version": "1.0",
+      "effective_date": "2024-12-17",
+      "title": "Motors App Vehicle Hire Agreement",
+      "parties": {
+        "vendor": {
+          "name": "Vendor Name",
+          "contact": "Vendor Contact Details"
+        },
+        "customer": {
+          "name": "Customer Name",
+          "driving_licence_number": "Customer Driving Licence Number",
+          "contact": "Customer Contact Details"
+        }
+      },
+      "sections": [
+        {
+          "title": "1. Vehicle Details",
+          "content": "The vendor agrees to provide the vehicle described at the time of booking. Vehicle condition, mileage, and fuel level will be recorded before and after hire."
+        },
+        {
+          "title": "2. Driver Restrictions",
+          "content": "Only the verified hirer (customer) who provided a driving licence may drive the vehicle. Sub-hiring, lending, or unauthorised drivers are strictly prohibited unless written approval is obtained from the vendor."
+        },
+        {
+          "title": "3. Insurance",
+          "content": "By default, the customer is responsible for ensuring valid insurance is in place. If the vendor provides insurance, the vendor’s terms and restrictions (including age limits, excess, and coverage) will apply."
+        },
+        {
+          "title": "4. Liability for Damage",
+          "content": "The customer is fully responsible for any damage, loss, or theft of the vehicle during the hire period. All damages identified after the hire, supported by photographic or video evidence, will be charged to the customer."
+        },
+        {
+          "title": "5. Fuel Policy",
+          "content": "The vehicle must be returned with the same fuel level as provided. Default refuelling charge is £15 per quarter tank missing, unless otherwise stated by the vendor."
+        },
+        {
+          "title": "6. Mileage Allowance",
+          "content": "The default allowance is 150 miles per day. Excess mileage is charged at £0.50 per mile unless otherwise set by the vendor."
+        },
+        {
+          "title": "7. Late Return",
+          "content": "The default late fee is £10 per 30 minutes. If the customer fails to collect the vehicle within two hours of the agreed time, a £50 charge applies and the remaining balance will be refunded."
+        },
+        {
+          "title": "8. Breakdowns",
+          "content": "The customer must immediately contact the vendor in the event of a breakdown. Repairs may only proceed with vendor approval. If unreachable, the customer must contact their insurance or breakdown provider but await vendor confirmation before authorising repairs."
+        },
+        {
+          "title": "9. Fines and Penalties",
+          "content": "The customer is solely responsible for all fines, penalties, and legal consequences incurred during the hire, including parking, speeding, and traffic offences. The customer’s driving licence details stored by Motors App may be shared with relevant authorities."
+        },
+        {
+          "title": "10. Cancellations",
+          "content": "Cancellations within 24 hours of the booking start time incur a fee of one-third of the hire cost, payable by the cancelling party. Cancellations made more than 24 hours in advance are free of charge."
+        },
+        {
+          "title": "11. Vehicle Substitution",
+          "content": "If the booked vehicle is unavailable, the vendor must provide a similar replacement in type, value, and hire cost. If no suitable replacement is available and the cancellation occurs within 24 hours of hire, the vendor must refund the customer and pay an additional one-third of the hire cost. Motors App bears no liability for substitution issues."
+        },
+        {
+          "title": "12. Termination of Agreement",
+          "content": "The agreement automatically terminates upon return and inspection of the vehicle. Either party may terminate earlier for breach of these terms. Any outstanding liabilities (damage, fines, fees) will survive termination until settled."
+        },
+        {
+          "title": "13. Indemnity",
+          "content": "Both the vendor and customer agree to indemnify and hold harmless Motors App from all claims, disputes, damages, or third-party actions arising from the hire agreement."
+        },
+        {
+          "title": "14. Dispute Resolution",
+          "content": "Disputes must be resolved directly between the vendor and customer. Motors App is not a party to the agreement and assumes no liability."
+        },
+        {
+          "title": "15. Force Majeure",
+          "content": "Neither party shall be liable for non-performance caused by events beyond their reasonable control, including but not limited to natural disasters, government actions, strikes, or system failures."
+        }
+      ],
+      "signatures": {
+        "vendor_signature": {
+          "type": "digital",
+          "required": true,
+          "text": "I, the Vendor, agree to the terms of this Vehicle Hire Agreement."
+        },
+        "customer_signature": {
+          "type": "digital",
+          "required": true,
+          "text": "I, the Customer, agree to the terms of this Vehicle Hire Agreement."
+        }
+      }
+    }
+  }
+  
+  

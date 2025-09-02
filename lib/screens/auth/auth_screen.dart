@@ -1,8 +1,9 @@
 // lib/screens/auth_screen.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Add this import
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart'; // Add this import
 import 'package:myapp/services/auth_service.dart';
-import 'package:myapp/screens/customer_submission_screen.dart';
+import 'package:myapp/screens/customer/customer_submission_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -28,9 +29,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _submitAuthForm() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       if (_isLogin) {
         await _authService.signInWithEmailAndPassword(
@@ -44,11 +45,13 @@ class _AuthScreenState extends State<AuthScreen> {
           role: _selectedRole,
         );
       }
-      
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const CustomerSubmissionScreen()),
+          MaterialPageRoute(
+            builder: (context) => const CustomerSubmissionScreen(),
+          ),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -59,12 +62,36 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Temporary function to call the makeFirstAdmin Cloud Function
+  Future<void> makeFirstAdmin() async {
+    final functions = FirebaseFunctions.instance;
+    try {
+      final HttpsCallable callable = functions.httpsCallable('makeFirstAdmin');
+      final result = await callable.call(<String, dynamic>{
+        'email': 'emjadulhoqu3@gmail.com',
+      });
+      print(result.data['message']);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.data['message'] ?? 'Success!')),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      print('Error calling function: ${e.code} - ${e.message}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.code} - ${e.message}')),
+        );
+      }
     }
   }
 
@@ -92,10 +119,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email address'),
+                      decoration: const InputDecoration(
+                        labelText: 'Email address',
+                      ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.isEmpty || !value.contains('@')) {
+                        if (value == null ||
+                            value.isEmpty ||
+                            !value.contains('@')) {
                           return 'Please enter a valid email';
                         }
                         return null;
@@ -153,9 +184,20 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     TextButton(
                       onPressed: _toggleAuthMode,
-                      child: Text(_isLogin
-                          ? 'Create new account'
-                          : 'I already have an account'),
+                      child: Text(
+                        _isLogin
+                            ? 'Create new account'
+                            : 'I already have an account',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Temporary Button to make yourself an admin
+                    ElevatedButton(
+                      onPressed: makeFirstAdmin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('Make Me Admin (Temporary)'),
                     ),
                   ],
                 ),

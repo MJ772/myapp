@@ -1,44 +1,23 @@
 {
   "emulators": {
-  "auth": {
-    "host": "0.0.0.0",
-    "port": 9099
-  },
-  "firestore": {
-    "host": "0.0.0.0",
-    "port": 8080
-  },
-  "functions": {
-    "host": "0.0.0.0",
-    "port": 5002
-  },
-  "hosting": {
-    "host": "0.0.0.0",
-    "port": 5000
-  },
-  "ui": {  
-    "port": 4001
-  }
-},
-
-  "flutter": {
-    "platforms": {
-      "android": {
-        "default": {
-          "projectId": "motorsappdemo1",
-          "appId": "1:389689573663:android:a5327ff7740c9071d7b02a",
-          "fileOutput": "android/app/google-services.json"
-        }
-      },
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "motorsappdemo1",
-          "configurations": {
-            "android": "1:389689573663:android:a5327ff7740c9071d7b02a",
-            "web": "1:389689573663:web:21c69ff34872ae03d7b02a"
-          }
-        }
-      }
+    "auth": {
+      "host": "0.0.0.0",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "0.0.0.0",
+      "port": 8080
+    },
+    "functions": {
+      "host": "0.0.0.0",
+      "port": 5001
+    },
+    "hosting": {
+      "host": "0.0.0.0",
+      "port": 5000
+    },
+    "ui": {
+      "port": 4001
     }
   },
   "firestore": {

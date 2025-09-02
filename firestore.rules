@@ -2,26 +2,246 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Rules for the users collection
-    match /users/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+    // --------- Helpers ---------
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Rules for the repair_requests collection
+    function userDoc() {
+      return isSignedIn()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid))
+        : null;
+    }
+
+    function userRole() {
+      return userDoc() != null ? userDoc().data.role : null;
+    }
+
+    function isAdmin()        { return userRole() == 'admin'; }
+    function isVendor()       { return userRole() == 'garage'; }
+    function isVendorApproved(){ return isVendor() && (userDoc().data.vendorApproved == true); }
+    function isCustomer()     { return userRole() == 'customer'; }
+    function isChauffeur()    { return userRole() == 'chauffeur'; }
+    function isChauffeurApproved(){ return isChauffeur() && (userDoc().data.chauffeurApproved == true); }
+    function isCourier()      { return userRole() == 'courier'; }
+    function isCourierApproved(){ return isCourier() && (userDoc().data.courierApproved == true); }
+    function isSupport()      { return userRole() == 'support'; }
+
+    // --------- USERS ----------
+    // users/{uid}
+    match /users/{uid} {
+      // Read: self or admin
+      allow read: if isSignedIn() && (uid == request.auth.uid || isAdmin());
+
+      // Create: self on signup (admin can also create via server if needed)
+      allow create: if isSignedIn() && uid == request.auth.uid;
+
+      // Update: self (but cannot escalate role/approvals/stripe) or admin
+      allow update: if isSignedIn() && (
+        uid == request.auth.uid || isAdmin()
+      ) && validUserUpdate();
+
+      // Delete: admin only
+      allow delete: if isAdmin();
+
+      function validUserUpdate() {
+        // Prevent non-admin privilege escalation
+        return isAdmin() ||
+          (
+            request.resource.data.role == resource.data.role &&
+            request.resource.data.vendorApproved == resource.data.vendorApproved &&
+            request.resource.data.chauffeurApproved == resource.data.chauffeurApproved &&
+            request.resource.data.courierApproved == resource.data.courierApproved &&
+            request.resource.data.stripeConnected == resource.data.stripeConnected
+          );
+      }
+    }
+
+    // --------- REPAIR REQUESTS ----------
+    // repair_requests/{requestId}
     match /repair_requests/{requestId} {
-      allow read, create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      // All signed-in roles can read
+      allow read: if isSignedIn();
+
+      // Create by any signed-in user (typically customers)
+      allow create: if isSignedIn();
+
+      // Update/Delete: owner (customerId) or admin
+      allow update, delete: if isSignedIn() &&
+        (resource.data.customerId == request.auth.uid || isAdmin());
+
+      // bids subcollection
+      match /bids/{bidId} {
+        allow read: if isSignedIn();
+        // Approved vendors place bids
+        allow create: if isSignedIn() && isVendorApproved();
+        // Vendor can update/delete own bid; admin can manage all
+        allow update, delete: if isSignedIn() && (
+          (resource.data.vendorId == request.auth.uid && isVendorApproved()) || isAdmin()
+        );
+      }
     }
 
-    // Rules for the bids collection
-    match /bids/{bidId} {
-      allow read, create: if request.auth != null;
+    // --------- RENTALS (Self-drive / Chauffeured) ----------
+    // rentals/{rentalId}
+    match /rentals/{rentalId} {
+      allow read: if isSignedIn();
+      // Approved vendors create rental listings
+      allow create: if isSignedIn() && isVendorApproved();
+      // Update/Delete by owning vendor or admin
+      allow update, delete: if isSignedIn() && (
+        resource.data.vendorId == request.auth.uid || isAdmin()
+      );
+
+      // reservations subcollection (customer bookings)
+      match /reservations/{resId} {
+        // Read: the customer, owning vendor, assigned chauffeur, or admin
+        allow read: if isSignedIn() && (
+          isAdmin() ||
+          resource.data.customerId == request.auth.uid ||
+          get(/databases/$(database)/documents/rentals/$(rentalId)).data.vendorId == request.auth.uid ||
+          // if a chauffeur is assigned, allow them to read as well
+          (resource.data.chauffeurAssignment.driverId == request.auth.uid && isChauffeurApproved())
+        );
+
+        // Create by customer
+        allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+
+        // Update/Delete: by the customer (own), owning vendor, assigned chauffeur (for status fields), or admin
+        allow update, delete: if isSignedIn() && (
+          resource.data.customerId == request.auth.uid ||
+          get(/databases/$(database)/documents/rentals/$(rentalId)).data.vendorId == request.auth.uid ||
+          (resource.data.chauffeurAssignment.driverId == request.auth.uid && isChauffeurApproved()) ||
+          isAdmin()
+        );
+      }
     }
 
-    // Rules for the services collection
-    match /services/{serviceId} {
-      allow read: if request.auth != null;
+    // --------- CHAUFFEUR availability & jobs ----------
+    // users/{uid}/availability/{slotId}
+    match /users/{uid}/availability/{slotId} {
+      allow read: if isSignedIn() && (uid == request.auth.uid || isAdmin());
+      allow create, update, delete: if isSignedIn() && uid == request.auth.uid && isChauffeurApproved();
+    }
+
+    // users/{uid}/chauffeur_jobs/{jobId}
+    match /users/{uid}/chauffeur_jobs/{jobId} {
+      allow read: if isSignedIn() && (uid == request.auth.uid || isAdmin());
+      // Accept/decline/progress changes by chauffeur; admin can override via parent reservation
+      allow create, update, delete: if isSignedIn() && uid == request.auth.uid && isChauffeurApproved();
+    }
+
+    // --------- VEHICLES FOR SALE ----------
+    // vehicles/{vehicleId}
+    match /vehicles/{vehicleId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isVendorApproved();
+      allow update, delete: if isSignedIn() && (
+        resource.data.vendorId == request.auth.uid || isAdmin()
+      );
+
+      // reservations (viewings)
+      match /reservations/{resId} {
+        allow read: if isSignedIn() && (
+          isAdmin() ||
+          resource.data.customerId == request.auth.uid ||
+          get(/databases/$(database)/documents/vehicles/$(vehicleId)).data.vendorId == request.auth.uid
+        );
+        allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+        allow update, delete: if isSignedIn() && (
+          resource.data.customerId == request.auth.uid ||
+          get(/databases/$(database)/documents/vehicles/$(vehicleId)).data.vendorId == request.auth.uid ||
+          isAdmin()
+        );
+      }
+    }
+
+    // --------- EVENTS ----------
+    // events/{eventId}
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (isVendorApproved() || isAdmin());
+      allow update, delete: if isSignedIn() && isAdmin();
+
+      match /subscriptions/{subId} {
+        allow read: if isSignedIn() && (
+          isAdmin() || resource.data.customerId == request.auth.uid
+        );
+        allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+        allow update, delete: if isSignedIn() && (
+          resource.data.customerId == request.auth.uid || isAdmin()
+        );
+      }
+    }
+
+    // --------- BLACKLIST ----------
+    match /blacklist/{entryId} {
+      allow read: if isSignedIn() && (isVendorApproved() || isAdmin());
+      allow create: if isSignedIn() && (isVendorApproved() || isAdmin());
+      allow update, delete: if isSignedIn() && (
+        (resource.data.bannedBy == request.auth.uid && (isVendorApproved() || isSupport())) || isAdmin()
+      );
+    }
+
+    // --------- DELIVERY JOBS (SAME-DAY PARTS) ----------
+    // delivery_jobs/{deliveryId}
+    match /delivery_jobs/{deliveryId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.vendorId == request.auth.uid ||
+        resource.data.customerId == request.auth.uid ||
+        resource.data.assignedCourierId == request.auth.uid ||
+        isCourierApproved() // to browse "open" jobs list (be mindful of sensitive fields)
+      );
+      allow create: if isSignedIn() && (isAdmin() || isVendorApproved());
+      allow update, delete: if isSignedIn() && (
+        isAdmin() ||
+        (isVendorApproved() && resource.data.vendorId == request.auth.uid) ||
+        (isCourierApproved() && resource.data.assignedCourierId == request.auth.uid)
+      );
+    }
+
+    // users/{uid}/courier_jobs/{jobId}
+    match /users/{uid}/courier_jobs/{jobId} {
+      allow read: if isSignedIn() && (uid == request.auth.uid || isAdmin());
+      allow create, update, delete: if isSignedIn() && uid == request.auth.uid && isCourierApproved();
+    }
+
+    // --------- SUPPORT TICKETS & CONVERSATIONS ----------
+    // support_tickets/{ticketId}
+    match /support_tickets/{ticketId} {
+      // Read: ticket owner, support staff, or admin
+      allow read: if isSignedIn() && (
+        isAdmin() || isSupport() || resource.data.openedBy == request.auth.uid
+      );
+      // Anyone signed-in can open a ticket
+      allow create: if isSignedIn();
+      // Update: owner, support, or admin
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || isSupport() || resource.data.openedBy == request.auth.uid
+      );
+    }
+
+    // conversations/{convId}
+    // NOTE: You may want to enforce participant membership in Cloud Functions for stronger checks.
+    match /conversations/{convId} {
+      allow read, create: if isSignedIn();
+      // Allow support/admin to manage conversation metadata
+      allow update, delete: if isSignedIn() && (isAdmin() || isSupport());
+
+      match /messages/{msgId} {
+        // Members can read; support/admin can read
+        allow read: if isSignedIn();
+        // Any signed-in can send (recommend enforcing membership in CF)
+        allow create: if isSignedIn();
+        // Deleting messages by support/admin only (or handle in CF)
+        allow delete: if isSignedIn() && (isAdmin() || isSupport());
+      }
+    }
+
+    // --------- Default deny fallback ----------
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

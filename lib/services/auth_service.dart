@@ -1,61 +1,60 @@
 // lib/services/auth_service.dart
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Signs in a user with email and password
+  User? get currentUser => _auth.currentUser;
+
   Future<UserCredential> signInWithEmailAndPassword({
     required String email,
     required String password,
-  }) async {
-    try {
-      return await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } on FirebaseAuthException {
-      rethrow;
-    }
+  }) {
+    return _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  /// Creates a new user with email, password and role
+  /// role: 'customer' | 'garage' | 'admin' | 'chauffeur' | 'courier'
   Future<UserCredential> createUserWithEmailAndPassword({
     required String email,
     required String password,
-    String role = 'customer', // Default role with optional parameter
+    required String role,
   }) async {
-    try {
-      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+    final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    final uid = cred.user!.uid;
 
-      // Create user document with role
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-        'email': email,
-        'role': role,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+    // Only customers are auto-approved by default
+    final bool vendorApproved    = role == 'garage'    ? false : role == 'customer';
+    final bool chauffeurApproved = role == 'chauffeur' ? false : role == 'customer';
+    final bool courierApproved   = role == 'courier'   ? false : role == 'customer';
 
-      return userCredential;
-    } on FirebaseAuthException {
-      rethrow;
-    }
+    await _db.collection('users').doc(uid).set({
+      'uid': uid,
+      'email': email,
+      'role': role,
+      'displayName': cred.user!.displayName ?? '',
+      'photoUrl': cred.user!.photoURL ?? '',
+      'isVendor': role == 'garage',
+      'vendorApproved': vendorApproved,
+      'chauffeurApproved': chauffeurApproved,
+      'courierApproved': courierApproved,
+      'stripeConnected': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    return cred;
   }
 
-  /// Signs out the current user
-  Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+  Future<Map<String, dynamic>?> getUserDoc(String uid) async {
+    final snap = await _db.collection('users').doc(uid).get();
+    return snap.data();
   }
 
-  /// Returns the current user
-  User? get currentUser => _firebaseAuth.currentUser;
+  Future<String?> getUserRole(String uid) async {
+    final data = await getUserDoc(uid);
+    return data?['role'] as String?;
+  }
 
-  /// Auth state changes stream
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+  Future<void> signOut() => _auth.signOut();
 }

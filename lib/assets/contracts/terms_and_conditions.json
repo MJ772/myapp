@@ -1,0 +1,79 @@
+{
+  "terms_and_conditions": {
+    "version": "1.0",
+    "effective_date": "2024-12-17",
+    "title": "Motors App Terms & Conditions",
+    "sections": [
+      {
+        "title": "Introduction",
+        "content": "By using Motors App, you agree to these Terms & Conditions. Motors App acts solely as a facilitating platform connecting customers and vendors. Motors App is not responsible for vehicles, services, or disputes arising between vendors and customers."
+      },
+      {
+        "title": "Eligibility",
+        "content": "The default minimum age for customers is 17 years. Vendors may set higher minimum age requirements based on their own insurance policies. Customers must hold a valid driving licence and provide proof before hire."
+      },
+      {
+        "title": "Vehicle Hire and Usage",
+        "content": "Only the verified hirer whose driving licence and details were submitted may drive the vehicle. Sub-hiring, lending, or allowing any other person to drive is strictly prohibited unless approved by the vendor."
+      },
+      {
+        "title": "Fuel Policy",
+        "content": "Vehicles must be returned with the same fuel level as at the start of the hire. Default refuelling charge is £15 per quarter tank missing, unless otherwise set by the vendor."
+      },
+      {
+        "title": "Mileage Policy",
+        "content": "Default allowance is 150 miles per day. Any excess will be charged at £0.50 per mile, unless otherwise set by the vendor."
+      },
+      {
+        "title": "Late Fees and Loss of Use",
+        "content": "Default late fee is £10 per 30 minutes. No admin fees apply unless the vendor provides vehicle delivery/collection, in which case the vendor sets their own charges. If the customer fails to attend collection after two hours, they will be charged £50 and refunded the remaining balance."
+      },
+      {
+        "title": "Insurance",
+        "content": "By default, customers are responsible for providing their own valid insurance and assume full liability. Vendors may provide insurance at their discretion, setting their own terms including age restrictions, excess, and coverage details."
+      },
+      {
+        "title": "Breakdowns",
+        "content": "The customer is responsible for any breakdowns. They must first contact the vendor and follow instructions. If unreachable, they may contact their insurance or breakdown cover provider but must await vendor confirmation before any repairs."
+      },
+      {
+        "title": "Damages",
+        "content": "Vendors and customers must record vehicle condition before and after hire. Any proven damage caused during hire will be charged to the customer’s payment card once verified with evidence."
+      },
+      {
+        "title": "Fines and Penalties",
+        "content": "All parking fines, speeding tickets, red light violations, bus lane fines, and any legal penalties arising during the booking are the full responsibility of the customer. The customer’s driving licence details, stored securely by Motors App, may be used as evidence. Liability rests solely with the customer, not the vendor or Motors App."
+      },
+      {
+        "title": "Cancellations",
+        "content": "Cancellations made within 24 hours of booking start time will incur a fee equal to one-third of the hire cost, payable by either vendor or customer depending on who cancels. No fee applies if cancelled more than 24 hours before the booking."
+      },
+      {
+        "title": "Vehicle Substitution",
+        "content": "If the booked vehicle is unavailable, the vendor must provide a similar replacement in type, value, and cost. If not possible, they must refund the customer and pay one-third of the hire cost if cancellation occurs within 24 hours of hire. Motors App is not liable for substitution issues."
+      },
+      {
+        "title": "Indemnity",
+        "content": "Both vendors and customers agree to indemnify and hold harmless Motors App from all claims, disputes, damages, or third-party actions arising from the use of the platform, vehicles, or services."
+      },
+      {
+        "title": "Force Majeure",
+        "content": "Neither Motors App nor vendors are liable for delays or failures caused by events beyond reasonable control, including natural disasters, government restrictions, strikes, or system failures."
+      },
+      {
+        "title": "Dispute Resolution",
+        "content": "Disputes must be resolved directly between vendor and customer. Motors App is not a party to disputes and bears no liability. Vendors and customers indemnify Motors App against any claims."
+      },
+      {
+        "title": "Blacklist Policy",
+        "content": "Motors App maintains a database of blacklisted customers for serious breaches, including unpaid fines or damages. Vendors may contribute to and access this list to protect against repeat offenders."
+      }
+    ],
+    "acceptance": {
+      "type": "checkbox",
+      "text": "I confirm that I have read and agree to the Motors App Terms & Conditions.",
+      "required": true
+    }
+  }
+}
+
