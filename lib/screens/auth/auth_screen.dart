@@ -1,9 +1,7 @@
-// lib/screens/auth_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_functions/cloud_functions.dart'; // Add this import
 import 'package:myapp/services/auth_service.dart';
-import 'package:myapp/screens/customer/customer_submission_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -19,7 +17,6 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLogin = true;
   bool _isLoading = false;
-  String _selectedRole = 'customer';
 
   void _toggleAuthMode() {
     setState(() {
@@ -42,18 +39,9 @@ class _AuthScreenState extends State<AuthScreen> {
         await _authService.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
-          role: _selectedRole,
         );
       }
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const CustomerSubmissionScreen(),
-          ),
-        );
-      }
+      // The AuthenticationWrapper will handle navigation, so no need for Navigator.pushReplacement here.
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -62,36 +50,10 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // Temporary function to call the makeFirstAdmin Cloud Function
-  Future<void> makeFirstAdmin() async {
-    final functions = FirebaseFunctions.instance;
-    try {
-      final HttpsCallable callable = functions.httpsCallable('makeFirstAdmin');
-      final result = await callable.call(<String, dynamic>{
-        'email': 'emjadulhoqu3@gmail.com',
-      });
-      print(result.data['message']);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.data['message'] ?? 'Success!')),
-        );
-      }
-    } on FirebaseFunctionsException catch (e) {
-      print('Error calling function: ${e.code} - ${e.message}');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.code} - ${e.message}')),
-        );
-      }
     }
   }
 
@@ -104,107 +66,140 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final deviceSize = MediaQuery.of(context).size;
     return Scaffold(
-      appBar: AppBar(title: Text(_isLogin ? 'Login' : 'Sign Up')),
-      body: Center(
-        child: Card(
-          margin: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email address',
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null ||
-                            value.isEmpty ||
-                            !value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: const InputDecoration(labelText: 'Password'),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.length < 6) {
-                          return 'Password must be 6+ characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    if (!_isLogin) ...[
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _selectedRole,
-                        decoration: const InputDecoration(
-                          labelText: 'I am a:',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'customer',
-                            child: Text('Customer'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'garage',
-                            child: Text('Garage'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _selectedRole = value);
-                          }
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a role';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    if (_isLoading)
-                      const CircularProgressIndicator()
-                    else
-                      ElevatedButton(
-                        onPressed: _submitAuthForm,
-                        child: Text(_isLogin ? 'Login' : 'Sign Up'),
-                      ),
-                    TextButton(
-                      onPressed: _toggleAuthMode,
-                      child: Text(
-                        _isLogin
-                            ? 'Create new account'
-                            : 'I already have an account',
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Temporary Button to make yourself an admin
-                    ElevatedButton(
-                      onPressed: makeFirstAdmin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      child: const Text('Make Me Admin (Temporary)'),
-                    ),
-                  ],
-                ),
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                  Theme.of(context).colorScheme.surface,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
           ),
-        ),
+          SingleChildScrollView(
+            child: SizedBox(
+              height: deviceSize.height,
+              width: deviceSize.width,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20.0),
+                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 70.0),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                      boxShadow: const [
+                        BoxShadow(
+                          blurRadius: 8,
+                          color: Colors.black26,
+                          offset: Offset(0, 2),
+                        )
+                      ],
+                    ),
+                    child: Text(
+                      'Motors App',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    elevation: 8.0,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeIn,
+                      height: _isLogin ? 320 : 360,
+                      constraints: BoxConstraints(minHeight: _isLogin ? 320 : 360),
+                      width: deviceSize.width * 0.85,
+                      padding: const EdgeInsets.all(16.0),
+                      child: Form(
+                        key: _formKey,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              TextFormField(
+                                controller: _emailController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                  prefixIcon: Icon(Icons.email),
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (value) {
+                                  if (value == null || !value.contains('@')) {
+                                    return 'Invalid email!';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _passwordController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: Icon(Icons.lock),
+                                  border: OutlineInputBorder(),
+                                ),
+                                obscureText: true,
+                                validator: (value) {
+                                  if (value == null || value.length < 5) {
+                                    return 'Password is too short!';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              if (_isLoading)
+                                const CircularProgressIndicator()
+                              else
+                                ElevatedButton(
+                                  onPressed: _submitAuthForm,
+                                  style: ElevatedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 30.0, vertical: 8.0),
+                                    backgroundColor: Theme.of(context).primaryColor,
+                                    foregroundColor: Theme.of(context).primaryTextTheme.labelLarge?.color,
+                                  ),
+                                  child: Text(_isLogin ? 'LOGIN' : 'SIGN UP'),
+                                ),
+                              TextButton(
+                                onPressed: _toggleAuthMode,
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 30.0, vertical: 4),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  foregroundColor: Theme.of(context).primaryColor,
+                                ),
+                                child: Text(
+                                    '${_isLogin ? 'SIGNUP' : 'LOGIN'} INSTEAD'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -9,8 +9,10 @@ class RepairRequest {
   final GeoPoint location;
   final String status;
   final DateTime createdAt;
-  final List<Bid> bids;
+  final String? garageId;
+  final List<Bid>? bids;
   final Bid? acceptedBid;
+  final bool isReviewed;
 
   RepairRequest({
     required this.id,
@@ -20,8 +22,10 @@ class RepairRequest {
     required this.location,
     required this.status,
     required this.createdAt,
-    required this.acceptedBid,
-    required this.bids,
+    this.garageId,
+    this.acceptedBid,
+    this.bids,
+    this.isReviewed = false,
   });
 
 factory RepairRequest.fromDocument(DocumentSnapshot doc) {
@@ -34,12 +38,14 @@ factory RepairRequest.fromDocument(DocumentSnapshot doc) {
       location: data['location'] ?? const GeoPoint(0, 0),
       status: data['status'] ?? 'open',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      garageId: data['garageId'] as String?,
       bids: (data['bids'] as List<dynamic>?)
               ?.map((bidData) => Bid.fromMap(bidData as Map<String, dynamic>)) // Assuming Bid has fromMap
               .toList() ??
           [], // Provide empty list if 'bids' is null or empty
       acceptedBid: (data['acceptedBid'] as Map<String, dynamic>?) != null
           ? Bid.fromMap(data['acceptedBid'] as Map<String, dynamic>) : null,
+      isReviewed: data['isReviewed'] ?? false,
     );
   }
 
@@ -53,8 +59,10 @@ factory RepairRequest.fromDocument(DocumentSnapshot doc) {
       'location': location,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
-      'bids': bids.map((bid) => bid.toMap()).toList(), // Assuming Bid has a toMap method
+      'garageId': garageId,
+      'bids': bids?.map((bid) => bid.toMap()).toList(), // Assuming Bid has a toMap method
       'acceptedBid': acceptedBid?.toMap(), // Assuming Bid has a toMap method
+      'isReviewed': isReviewed,
     };
   }
 }

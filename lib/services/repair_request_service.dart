@@ -1,9 +1,10 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:myapp/models/service.dart';
-import 'package:myapp/models/repair_request.dart'; // Import RepairRequest model
-import 'package:myapp/models/bid.dart'; // Import Bid model
+import 'package:myapp/models/repair_request.dart';
+import 'package:myapp/models/bid.dart';
 
 class RepairRequestService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -19,6 +20,19 @@ class RepairRequestService {
       debugPrint('Error fetching repair request by ID: $e');
       rethrow;
     }
+  }
+
+  Stream<RepairRequest> getRepairRequestStream(String requestId) {
+    return _firestore
+        .collection('repair_requests')
+        .doc(requestId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) {
+        throw Exception('Repair request with ID $requestId not found.');
+      }
+      return RepairRequest.fromDocument(doc);
+    });
   }
 
   Future<void> submitRequest({
@@ -85,7 +99,6 @@ class RepairRequestService {
     }
   }
 
-  // Unified method to fetch bids
   Stream<List<Bid>> fetchBidsForRequest(String requestId) {
     return _firestore
         .collection('repair_requests')
@@ -98,7 +111,6 @@ class RepairRequestService {
     });
   }
 
-  // Alternative method for raw QuerySnapshot access
   Stream<QuerySnapshot> getBidsForRequest(String requestId) {
     return _firestore
         .collection('repair_requests')
@@ -108,9 +120,16 @@ class RepairRequestService {
         .snapshots();
   }
 
-  // Service Catalog methods
+  Stream<List<Bid>> fetchBidsByGarageId(String garageId) {
+    return _firestore
+        .collectionGroup('bids')
+        .where('garageId', isEqualTo: garageId)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Bid.fromDocumentSnapshot(doc)).toList();
+    });
+  }
 
-  /// Adds a new service for a garage.
   Future<void> addService({
     required String garageId,
     required String title,
@@ -131,7 +150,6 @@ class RepairRequestService {
     }
   }
 
-  /// Fetches services for a specific garage.
   Stream<List<Service>> fetchServicesByGarageId(String garageId) {
     return _firestore
         .collection('services')
@@ -142,7 +160,6 @@ class RepairRequestService {
     });
   }
 
-  /// Updates an existing service.
   Future<void> updateService({
     required String serviceId,
     required String title,
@@ -161,7 +178,6 @@ class RepairRequestService {
     }
   }
 
-  /// Deletes a service by its ID.
   Future<void> deleteService(String serviceId) async {
     try {
       await _firestore.collection('services').doc(serviceId).delete();

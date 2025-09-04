@@ -1,60 +1,73 @@
-// lib/services/auth_service.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:myapp/utils/constants.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  User? get currentUser => _auth.currentUser;
+  Future<User?> createUserWithEmailAndPassword(
+      String email, String password, String role) async {
+    try {
+      final UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
+      final User? user = userCredential.user;
 
-  Future<UserCredential> signInWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
-  }
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'role': role,
+          'vendorApproved': role == 'garage' ? kAutoApproveNonCustomer : false,
+          'chauffeurApproved':
+              role == 'chauffeur' ? kAutoApproveNonCustomer : false,
+          'courierApproved': role == 'courier' ? kAutoApproveNonCustomer : false,
+          'displayName': '',
+          'photoUrl': '',
+          'stripeConnected': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
-  /// role: 'customer' | 'garage' | 'admin' | 'chauffeur' | 'courier'
-  Future<UserCredential> createUserWithEmailAndPassword({
-    required String email,
-    required String password,
-    required String role,
-  }) async {
-    final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-    final uid = cred.user!.uid;
-
-    // Only customers are auto-approved by default
-    final bool vendorApproved    = role == 'garage'    ? false : role == 'customer';
-    final bool chauffeurApproved = role == 'chauffeur' ? false : role == 'customer';
-    final bool courierApproved   = role == 'courier'   ? false : role == 'customer';
-
-    await _db.collection('users').doc(uid).set({
-      'uid': uid,
-      'email': email,
-      'role': role,
-      'displayName': cred.user!.displayName ?? '',
-      'photoUrl': cred.user!.photoURL ?? '',
-      'isVendor': role == 'garage',
-      'vendorApproved': vendorApproved,
-      'chauffeurApproved': chauffeurApproved,
-      'courierApproved': courierApproved,
-      'stripeConnected': false,
-      'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    return cred;
-  }
-
-  Future<Map<String, dynamic>?> getUserDoc(String uid) async {
-    final snap = await _db.collection('users').doc(uid).get();
-    return snap.data();
+      return user;
+    } catch (e) {
+      print('Error creating user: $e');
+      return null;
+    }
   }
 
   Future<String?> getUserRole(String uid) async {
-    final data = await getUserDoc(uid);
-    return data?['role'] as String?;
+    try {
+      final DocumentSnapshot doc =
+          await _firestore.collection('users').doc(uid).get();
+      return doc.get('role');
+    } catch (e) {
+      print('Error getting user role: $e');
+      return null;
+    }
   }
 
-  Future<void> signOut() => _auth.signOut();
+  Future<DocumentSnapshot?> getUserDoc(String uid) async {
+    try {
+      return await _firestore.collection('users').doc(uid).get();
+    } catch (e) {
+      print('Error getting user document: $e');
+      return null;
+    }
+  }
+
+  Future<User?> signInWithEmailAndPassword(
+      String email, String password) async {
+    try {
+      final UserCredential userCredential = await _auth
+          .signInWithEmailAndPassword(email: email, password: password);
+      return userCredential.user;
+    } catch (e) {
+      print('Error signing in: $e');
+      return null;
+    }
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
 }

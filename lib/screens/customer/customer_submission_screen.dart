@@ -1,3 +1,4 @@
+
 import 'dart:io';
 import 'dart:developer' as developer;
 
@@ -7,8 +8,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:myapp/services/resumable_upload_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:myapp/services/repair_request_service.dart';
+import 'package:shimmer/shimmer.dart';
 
 class CustomerSubmissionScreen extends StatefulWidget {
   const CustomerSubmissionScreen({super.key});
@@ -23,7 +26,27 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
   List<XFile> _images = <XFile>[];
   Position? _currentPosition;
   bool _isUploading = false;
+  double _uploadProgress = 0.0;
   final RepairRequestService _repairRequestService = RepairRequestService();
+  final ResumableUploadService _resumableUploadService = ResumableUploadService();
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollTopButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (mounted) {
+        setState(() {
+          _showScrollTopButton = _scrollController.offset >= 200;
+        });
+      }
+    });
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+  }
 
   Future<void> _getLocation() async {
     bool serviceEnabled;
@@ -84,26 +107,49 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
   Future<List<String>> _uploadImages() async {
     List<String> imageUrls = [];
     final storageRef = FirebaseStorage.instance.ref();
+    final uploadId = const Uuid().v4();
+    final imagePaths = _images.map((image) => image.path).join(',');
 
-    for (XFile image in _images) {
+    await _resumableUploadService.saveUploadState(uploadId, imagePaths);
+
+    final totalImages = _images.length;
+    var uploadedImages = 0;
+
+    for (var image in _images) {
       final fileName = const Uuid().v4();
       final imageRef = storageRef.child('repair_images/$fileName.jpg');
+      final uploadTask = imageRef.putFile(File(image.path));
+
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        if (mounted) {
+          setState(() {
+            _uploadProgress = (uploadedImages + (snapshot.bytesTransferred / snapshot.totalBytes)) / totalImages;
+          });
+        }
+      });
+
       try {
-        await imageRef.putFile(File(image.path));
-        final imageUrl = await imageRef.getDownloadURL();
+        final snapshot = await uploadTask;
+        final imageUrl = await snapshot.ref.getDownloadURL();
         imageUrls.add(imageUrl);
+        uploadedImages++;
       } on FirebaseException catch (e) {
         developer.log('Firebase Storage Error uploading image ${image.path}: ${e.code} - ${e.message}', name: 'ImageUpload');
+        return [];
       } catch (e) {
         developer.log('Error uploading image: $e', name: 'ImageUpload');
+        return [];
       }
     }
+
+    await _resumableUploadService.clearUploadState();
     return imageUrls;
   }
 
   Future<void> _submitRequest() async {
     setState(() {
       _isUploading = true;
+      _uploadProgress = 0.0;
     });
 
     final user = FirebaseAuth.instance.currentUser;
@@ -139,10 +185,10 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
 
     final imageUrls = await _uploadImages();
 
-    if (imageUrls.isEmpty) {
+    if (imageUrls.isEmpty && _images.isNotEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload images.')),
+          const SnackBar(content: Text('Failed to upload images. The upload will be automatically resumed later.')),
         );
       }
       if (mounted) {
@@ -186,6 +232,7 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
       if (mounted) {
         setState(() {
           _isUploading = false;
+          _uploadProgress = 0.0;
         });
       }
     }
@@ -203,6 +250,7 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
   @override
   void dispose() {
     _descriptionController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -212,6 +260,12 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
       appBar: AppBar(
         title: const Text('Submit Repair Request'),
       ),
+      floatingActionButton: _showScrollTopButton
+          ? FloatingActionButton(
+              onPressed: _scrollToTop,
+              child: const Icon(Icons.arrow_upward),
+            )
+          : null,
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseAuth.instance.currentUser != null
             ? FirebaseFirestore.instance
@@ -230,54 +284,118 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
 
           if (isAuthenticated && isCustomer) {
             return _isUploading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 50.0),
+                          child: LinearProgressIndicator(
+                            value: _uploadProgress,
+                            minHeight: 10,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Uploading... ${(_uploadProgress * 100).toStringAsFixed(0)}%',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ],
+                    ),
+                  )
                 : SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          TextField(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0), // Add padding for FAB
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildStep(
+                          context,
+                          icon: Icons.description,
+                          title: 'Describe the Issue',
+                          content: TextFormField(
                             controller: _descriptionController,
-                            decoration: const InputDecoration(labelText: 'Issue Description'),
+                            decoration: const InputDecoration(
+                              hintText: 'e.g., Engine making strange noises',
+                              border: OutlineInputBorder(),
+                            ),
                             maxLines: 3,
                           ),
-                          const SizedBox(height: 16.0),
-                          ElevatedButton(
-                            onPressed: _selectImages,
-                            child: const Text('Select Photos'),
-                          ),
-                          if (_images.isNotEmpty) ...[
-                            const SizedBox(height: 8.0),
-                            Text('Selected ${_images.length} image(s)'),
-                            const SizedBox(height: 8.0),
-                            SizedBox(
-                              height: 100,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _images.length,
-                                itemBuilder: (ctx, i) => Padding(
-                                  padding: const EdgeInsets.only(right: 8.0),
-                                  child: Image.file(File(_images[i].path), width: 100, fit: BoxFit.cover),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildStep(
+                          context,
+                          icon: Icons.camera_alt,
+                          title: 'Upload Photos',
+                          content: Column(
+                            children: [
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.add_a_photo),
+                                label: const Text('Select Images'),
+                                onPressed: _selectImages,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
                               ),
-                            ),
-                          ],
-                          const SizedBox(height: 16.0),
-                          ElevatedButton(
-                            onPressed: _getLocation,
-                            child: const Text('Get Current Location'),
+                              if (_images.isNotEmpty)
+                                _buildImagePreview(),
+                            ],
                           ),
-                          if (_currentPosition != null) ...[
-                            const SizedBox(height: 8.0),
-                            Text('Location: ${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}'),
-                          ],
-                          const SizedBox(height: 24.0),
-                          ElevatedButton(
+                        ),
+                        const SizedBox(height: 24),
+                        _buildStep(
+                          context,
+                          icon: Icons.location_on,
+                          title: 'Share Your Location',
+                          content: Column(
+                            children: [
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.my_location),
+                                label: const Text('Get Current Location'),
+                                onPressed: _getLocation,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                              if (_currentPosition != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    'Lat: ${_currentPosition!.latitude.toStringAsFixed(4)}, Lon: ${_currentPosition!.longitude.toStringAsFixed(4)}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                                spreadRadius: 2,
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
                             onPressed: _submitRequest,
-                            child: const Text('Submit Request'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                            child: const Text('Submit Request', style: TextStyle(fontSize: 18)),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   );
           } else {
@@ -289,6 +407,60 @@ class _CustomerSubmissionScreenState extends State<CustomerSubmissionScreen> {
               ),
             );
           }
+        },
+      ),
+    );
+  }
+
+  Widget _buildStep(BuildContext context, {required IconData icon, required String title, required Widget content}) {
+    return Card(
+      elevation: 4.0,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28),
+                const SizedBox(width: 15),
+                Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            content,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePreview() {
+    return Container(
+      height: 130,
+      margin: const EdgeInsets.only(top: 20),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _images.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 10.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12.0),
+              child: Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Image.file(
+                  File(_images[index].path),
+                  width: 110,
+                  height: 110,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          );
         },
       ),
     );
