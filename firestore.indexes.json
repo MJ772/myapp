@@ -23,7 +23,15 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "vendorId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "services",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "garageId", "order": "ASCENDING" }
       ]
     }
   ],

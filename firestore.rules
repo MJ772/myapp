@@ -20,7 +20,11 @@ service cloud.firestore {
       // Prefer custom claims (token.admin) if you set them via Admin SDK.
       return isSignedIn() && (
         request.auth.token.admin == true ||
-        roleOf(uid()) == 'admin'
+        roleOf(uid()) == 'admin' ||
+        (request.auth.token.email in [
+          'emjadulhoqu3@gmail.com',
+          'mandemmotorsltd@gmail.com'
+        ])
       );
     }
     function isSupport() {
@@ -149,32 +153,20 @@ service cloud.firestore {
           ('agreedToTerms' in reqData() && reqData().agreedToTerms == true) &&
           ('agreedToContract' in reqData() && reqData().agreedToContract == true);
 
-        // Update:
-        //  - Customer may cancel own reservation: status -> 'cancelled' (and cannot modify foreign keys)
-        //  - Vendor (owner of rental) may confirm/assign chauffeur
-        //  - Chauffeur (if assigned as driverId) may set assignment status to 'accepted'/'declined'
+        // Updates: protect invariants and allow specific role actions
         allow update: if isSignedIn() && (
-          // Customer cancel
-          (
-            resData().customerId == uid() &&
-            reqData().status == 'cancelled' &&
-            // protect invariant fields
-            unchanged('customerId') && unchanged('startDate') && unchanged('endDate')
-          )
+          // Customer cancels own reservation
+          (resData().customerId == uid() &&
+           reqData().status == 'cancelled' &&
+           unchanged('customerId') && unchanged('startDate') && unchanged('endDate') && unchanged('vendorId'))
           ||
-          // Vendor confirm or assign chauffeur
-          (
-            get(/databases/$(database)/documents/rentals/$(rentalId)).data.vendorId == uid() &&
-            // cannot change customerId or dates
-            unchanged('customerId') && unchanged('startDate') && unchanged('endDate')
-          )
+          // Vendor (owner) can confirm / assign chauffeur etc.; vendorId must remain unchanged
+          (get(/databases/$(database)/documents/rentals/$(rentalId)).data.vendorId == uid() &&
+           unchanged('customerId') && unchanged('startDate') && unchanged('endDate') && unchanged('vendorId'))
           ||
-          // Chauffeur respond to offer (nested path)
-          (
-            (reqData().chauffeurAssignment.driverId == uid() || resData().chauffeurAssignment.driverId == uid()) &&
-            // Only allow status flip for assignment
-            unchanged('customerId') && unchanged('startDate') && unchanged('endDate')
-          )
+          // Chauffeur modifies only assignment status
+          ((reqData().chauffeurAssignment.driverId == uid() || resData().chauffeurAssignment.driverId == uid()) &&
+           unchanged('customerId') && unchanged('startDate') && unchanged('endDate') && unchanged('vendorId'))
           ||
           isAdmin()
         );
@@ -273,7 +265,7 @@ service cloud.firestore {
     // ===== Support Tickets =====
     match /support_tickets/{ticketId} {
       // Create by any signed-in user
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && reqData().openedBy == uid();
 
       // Read:
       //  - The opener
@@ -292,6 +284,26 @@ service cloud.firestore {
       // Delete: admin only
       allow delete: if isAdmin();
     }
+
+    // ===== /services =====
+    match /services/{serviceId} {
+      // Read policy: public listing is OK; restrict if needed later
+      allow get, list: if true;
+
+      // Create by approved vendor; must own the service
+      allow create: if isSignedIn() &&
+        isGarage(uid()) && vendorApproved(uid()) &&
+        reqData().garageId == uid();
+
+      // Update/Delete by owning vendor or admin
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || (
+          isGarage(uid()) && vendorApproved(uid()) &&
+          resData().garageId == uid() && (('garageId' in reqData()) ? reqData().garageId == uid() : true)
+        )
+      );
+    }
+
 
     // ===== Default deny =====
     match /{document=**} {

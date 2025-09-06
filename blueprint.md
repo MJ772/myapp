@@ -1,101 +1,70 @@
-# Motors App Blueprint
+# Mandem Blueprint
 
-This document provides a comprehensive overview of the Motors App, a Flutter application designed to connect customers with various automotive services.
+## Overview
 
-## 1. Project Overview
+This document outlines the architecture, features, and design of the Mandem app, a comprehensive vehicle rental and service platform. The app connects customers with vehicle rentals (with optional chauffeurs), parts delivery, and garage services.
 
-The Motors App is a multi-faceted platform that facilitates the following services:
+## Architecture
 
-- **Vehicle Rentals:** Customers can rent vehicles from various vendors.
-- **Chauffeur Services:** Customers can hire chauffeurs for personal transportation.
-- **Courier Services:** Customers can request courier services for package delivery.
-- **Support:** A dedicated support system to assist all users.
+The application follows a standard Flutter layered architecture, separating UI (presentation), business logic (domain), and data persistence (data). State management is handled by `provider` for app-wide state and `ValueNotifier` for local widget state.
 
-## 2. Features
+*   **Data Layer**: Cloud Firestore is the primary database, with data models defined in `lib/models`. Firebase Storage is used for user-uploaded images and other assets.
+*   **Domain Layer**: Business logic is encapsulated in services and providers, ensuring a clear separation of concerns.
+*   **Presentation Layer**: The UI is built with Flutter's Material Design library, with custom themes and widgets for a consistent user experience.
 
-### 2.1. User Roles & Dashboards
+## Features
 
-The application implements a robust role-based access control system, with each role having a dedicated dashboard:
+### User Roles
 
-- **Admin:** (`AdminDashboard`) - Oversees the entire platform, with the ability to manage users, approve vendors, and monitor all activities.
-- **Garage:** (`GarageDashboard`) - Manages vehicle rentals and related services.
-- **Chauffeur:** (`ChauffeurDashboard`) - Manages their availability and accepts chauffeur requests.
-- **Courier:** (`CourierDashboard`) - Manages their availability and accepts delivery requests.
-- **Support:** (`SupportOverviewScreen`) - Manages and resolves support tickets.
-- **Customer:** (`CustomerSubmissionScreen`) - Submits requests for rentals, chauffeurs, and couriers.
+*   **Customer**: Can browse and rent vehicles, book services, and request parts delivery.
+*   **Garage (Vendor)**: Can list vehicles for rent, manage services, and fulfill parts orders.
+*   **Chauffeur**: Can be hired to drive rental vehicles.
+*   **Courier**: Can deliver parts to customers.
+*   **Admin/Support**: Can manage users, approve vendors, and handle support tickets.
 
-### 2.2. Authentication
+### Core Functionality
 
-- **Email & Password:** Users can sign up and log in using their email and password.
-- **Role-Based Redirection:** Upon login, users are automatically redirected to their respective dashboards.
-- **Pending Approval:** New non-customer users (garage, chauffeur, courier) are placed in a pending approval state until an admin approves their account. This is currently bypassed for development.
+*   **Authentication**: Users can sign up and sign in with email and password, with role selection at registration.
+*   **Vehicle Rentals**: Garages can list vehicles with details like make, model, year, price, and availability. Customers can browse, filter, and book rentals.
+*   **Chauffeur Services**: Customers can opt to hire a chauffeur for their rental.
+*   **Parts Delivery**: Garages can list parts for sale, and customers can order them for same-day delivery.
+*   **Garage Services**: Garages can list their services (e.g., oil change, tire rotation), and customers can book appointments.
+*   **Support System**: Users can create support tickets to get help from the admin/support team.
 
-### 2.3. Development & Testing
+## Design
 
-- **Developer Toggles:** The application includes developer toggles for bypassing role approvals and auto-approving non-customer users to streamline development and testing.
-- **Test Data Seeding:** A utility function is available to seed the Firestore database with test data for rentals, delivery jobs, and support tickets.
-- **Test User Creation:** A utility function is available to create a full set of test users with different roles.
+The app uses a modern, clean design with a consistent color scheme and typography. The UI is designed to be intuitive and easy to navigate for all user roles.
 
-### 2.4. Support Ticket System
+*   **Theming**: A centralized theme is defined in `lib/theme/theme.dart`, with light and dark modes.
+*   **Widgets**: Reusable widgets are used throughout the app to maintain a consistent look and feel.
+*   **Navigation**: `go_router` is used for declarative navigation, providing a robust and scalable routing solution.
 
-- **Ticket Creation:** Users can submit support tickets through a dedicated form (`CreateTicketScreen`).
-- **Ticket Viewing:** The `SupportOverviewScreen` displays a real-time list of all support tickets from Firestore, ordered by creation date.
-- **Status Indicators:** Tickets are visually marked as "Resolved" or "Pending".
-- **User-Friendly Timestamps:** The `timeago` package is used to show when a ticket was created in a relative format (e.g., "5 minutes ago").
+## Current Plan
 
-### 2.5. Garage Services Management
+### Task: Refactor and Enhance Firestore Rules & Models
 
-- **Live Data Dashboard:** The `GarageDashboard` displays a live count of "Open Rentals" by streaming data from Firestore.
-- **Service Management:** Garage owners can navigate to a `ManageServicesScreen` to perform full CRUD (Create, Read, and Delete) operations on their service offerings.
-- **Add Service:** A dialog allows for the easy addition of new services with a title, price, and duration.
-- **View & Delete:** Services are listed clearly, and can be deleted with a single tap.
+**Objective**: To improve the security, consistency, and functionality of the Firestore database by refactoring security rules, updating data models, and adding a new feature for garage services.
 
-## 3. Styling and Design
+**Steps**:
 
-- **Theme:** The app uses a Material 3 theme with a deep purple seed color.
-- **Layout:** The application follows a standard mobile-first layout with a focus on clean and intuitive UI.
+1.  **Refactor Screens**: Relocate `garage_dashboard_screen.dart` and `manage_services_screen.dart` from `lib/screens/garage/` to `lib/screens/vendor/` to better reflect the user role.
 
-## 4. File Structure
+2.  **Update Firestore Rules (`firestore.rules`)**:
+    *   Add a rule to allow specific admin emails (`emjadulhoqu3@gmail.com`, `mandemmotorsltd@gmail.com`) to have admin privileges.
+    *   Refine the `reservations` update rule to prevent users from changing the `vendorId`.
+    *   Add a rule for `support_tickets` to ensure that the `openedBy` field is set to the user's UID upon creation.
+    *   Implement rules for a new `services` collection to allow approved vendors to manage their services.
 
-```
-lib
-├── main.dart
-├── firebase_options.dart
-├── models
-│   ├── service.dart
-│   └── ticket.dart
-├── screens
-│   ├── admin
-│   │   └── admin_dashboard.dart
-│   ├── auth
-│   │   ├── login_screen.dart
-│   │   ├── signup_screen.dart
-│   │   └── pending_approval_screen.dart
-│   ├── chauffeur
-│   │   └── availability_editor_screen.dart
-│   ├── placeholder
-│   │   ├── chauffeur_dashboard.dart
-│   │   ├── courier_dashboard.dart
-│   │   └── customer_submission_screen.dart
-│   ├── support
-│   │   ├── support_overview_screen.dart
-│   │   └── create_ticket_screen.dart
-│   └── garage
-│       ├── garage_dashboard_screen.dart
-│       └── manage_services_screen.dart
-├── services
-│   └── auth_service.dart
-└── utils
-    ├── constants.dart
-    ├── dev_utils.dart
-    └── dev_user_creation.dart
-```
+3.  **Update Firestore Indexes (`firestore.indexes.json`)**:
+    *   Add a composite index for `reservations` to support querying by `vendorId`, `status`, and `createdAt`.
+    *   Add an index for the new `services` collection to allow querying by `garageId`.
 
-## 5. Smoke Test Completion
+4.  **Update `Ticket` Model (`lib/models/ticket.dart`)**:
+    *   Standardize the `userId` field to `openedBy` for consistency with the new security rules.
+    *   Add a `serverTime` parameter to the `toMap` method to use `FieldValue.serverTimestamp()` for accurate creation timestamps.
 
-- [x] **Admin:** `admin@test.com` -> `AdminDashboard`
-- [x] **Garage:** `garage@test.com` -> `GarageDashboard`
-- [x] **Chauffeur:** `chauffeur@test.com` -> `ChauffeurDashboard`
-- [x] **Courier:** `courier@test.com` -> `CourierDashboard`
-- [x] **Support:** `support@test.com` -> `SupportOverviewScreen`
-- [x] **Customer:** `customer@test.com` -> `CustomerSubmissionScreen`
+5.  **Update `CreateTicketScreen` (`lib/screens/support/create_ticket_screen.dart`)**:
+    *   Modify the ticket creation logic to use the `openedBy` field and set the `createdAt` timestamp using the server time.
+
+6.  **Update `Reservation` Model (`lib/models/reservation.dart`)**:
+    *   Ensure the `vendorId` is included in the `toMap` method so it is correctly saved to Firestore.

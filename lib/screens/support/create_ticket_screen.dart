@@ -32,18 +32,17 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         return;
       }
 
-      final newTicket = Ticket(
-        id: '', // Firestore will generate this
-        userId: user.uid,
-        subject: _subjectController.text,
-        message: _messageController.text,
-        createdAt: Timestamp.now(),
-      );
-
       try {
-        await FirebaseFirestore.instance
-            .collection('support_tickets')
-            .add(newTicket.toMap());
+        await FirebaseFirestore.instance.collection('support_tickets').add(
+          Ticket(
+            id: '',
+            openedBy: user.uid,
+            subject: _subjectController.text,
+            message: _messageController.text,
+            isResolved: false,
+            createdAt: Timestamp.now(), // ignored when serverTime=true
+          ).toMap(serverTime: true),
+        );
 
         Navigator.of(context).pop(); // Go back after submission
 
