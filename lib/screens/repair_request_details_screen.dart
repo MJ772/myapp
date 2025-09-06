@@ -1,13 +1,11 @@
-
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide Card; // << hide Card
 import 'package:myapp/services/repair_request_service.dart';
 import 'package:myapp/models/repair_request.dart';
 import 'package:myapp/models/bid.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 
 class RepairRequestDetailsScreen extends StatefulWidget {
   final String requestId;
@@ -456,3 +454,4 @@ class _RepairRequestDetailsScreenState extends State<RepairRequestDetailsScreen>
     );
   }
 }
+

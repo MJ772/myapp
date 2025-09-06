@@ -48,7 +48,11 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: Text(role),
                         ))
                     .toList(),
-                onChanged: (value) => setState(() => _role = value!),
+                onChanged: (value) {
+                  setState(() {
+                    _role = value!;
+                  });
+                },
                 decoration: const InputDecoration(labelText: 'Role'),
               ),
               const SizedBox(height: 20),

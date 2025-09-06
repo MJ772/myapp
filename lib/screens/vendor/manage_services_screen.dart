@@ -19,7 +19,7 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
   Widget build(BuildContext context) {
     final user = _auth.currentUser;
     if (user == null) {
-      return Scaffold(body: Center(child: Text('Please sign in.')));
+      return const Scaffold(body: Center(child: Text('Please sign in.')));
     }
 
     return Scaffold(
@@ -69,10 +69,10 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
   }
 
   void _showAddServiceDialog(BuildContext context, String garageId) {
-    final _formKey = GlobalKey<FormState>();
-    final _titleController = TextEditingController();
-    final _priceController = TextEditingController();
-    final _durationController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController();
+    final priceController = TextEditingController();
+    final durationController = TextEditingController();
 
     showDialog(
       context: context,
@@ -80,23 +80,23 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
         return AlertDialog(
           title: const Text('Add New Service'),
           content: Form(
-            key: _formKey,
+            key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
-                  controller: _titleController,
+                  controller: titleController,
                   decoration: const InputDecoration(labelText: 'Title'),
                   validator: (value) => value!.isEmpty ? 'Please enter a title' : null,
                 ),
                 TextFormField(
-                  controller: _priceController,
+                  controller: priceController,
                   decoration: const InputDecoration(labelText: 'Price'),
                   keyboardType: TextInputType.number,
                   validator: (value) => value!.isEmpty ? 'Please enter a price' : null,
                 ),
                 TextFormField(
-                  controller: _durationController,
+                  controller: durationController,
                   decoration: const InputDecoration(labelText: 'Duration (e.g., 1hr, 30min)'),
                   validator: (value) => value!.isEmpty ? 'Please enter a duration' : null,
                 ),
@@ -109,16 +109,17 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
                   final newService = Service(
                     id: '', // Firestore will generate
                     garageId: garageId,
-                    title: _titleController.text,
-                    price: double.parse(_priceController.text),
-                    duration: _durationController.text,
+                    title: titleController.text,
+                    price: double.parse(priceController.text),
+                    duration: durationController.text,
                   );
-                  _firestore.collection('services').add(newService.toMap());
+                  await _firestore.collection('services').add(newService.toMap());
+                  if (!context.mounted) return;
                   Navigator.of(context).pop();
                 }
               },
@@ -134,6 +135,7 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
     try {
       await _firestore.collection('services').doc(serviceId).delete();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete service: $e')),
       );

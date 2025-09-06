@@ -60,21 +60,29 @@ class _RentalCheckoutScreenState extends State<RentalCheckoutScreen> {
                       .doc(widget.rentalId);
                   final rentalDoc = await rentalRef.get();
                   final rentalData = rentalDoc.data()!;
+                  final vendorId = rentalData['vendorId'] as String?;
 
                   final booking = {
                     'startDate': _startDate,
                     'endDate': _endDate,
+                    'vendorId': vendorId,
+                    'status': 'pending',
+                    'agreedToTerms': true,
+                    'agreedToContract': true,
+                    'createdAt': FieldValue.serverTimestamp(),
                     'price': rentalData['pricePerDay'] *
                         _endDate!.difference(_startDate!).inDays,
-                    'userId': FirebaseAuth.instance.currentUser!.uid,
+                    'customerId': FirebaseAuth.instance.currentUser!.uid,
                   };
 
-                  await rentalRef.collection('bookings').add(booking);
+                  await rentalRef.collection('reservations').add(booking);
 
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Booking successful')),
                   );
 
+                  if (!context.mounted) return;
                   Navigator.popUntil(context, (route) => route.isFirst);
                 }
               },

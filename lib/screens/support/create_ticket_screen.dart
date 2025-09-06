@@ -25,7 +25,10 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        // Handle user not signed in
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to submit a ticket.')),
+        );
         setState(() {
           _isLoading = false;
         });
@@ -44,12 +47,15 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
           ).toMap(serverTime: true),
         );
 
+        if (!context.mounted) return;
         Navigator.of(context).pop(); // Go back after submission
 
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Support ticket submitted successfully!')),
         );
       } catch (e) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to submit ticket: $e')),
         );

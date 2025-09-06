@@ -1,1 +1,43 @@
-\nimport \'package:cloud_firestore/cloud_firestore.dart\';\nimport \'package:flutter/material.dart\';\nimport \'package:myapp/screens/customer/rentals/rental_checkout_screen.dart\';\n\nclass RentalDetailScreen extends StatelessWidget {\n  final String rentalId;\n\n  const RentalDetailScreen({super.key, required this.rentalId});\n\n  @override\n  Widget build(BuildContext context) {\n    return Scaffold(\n      appBar: AppBar(title: const Text(\'Rental Details\')),\n      body: FutureBuilder<DocumentSnapshot>(\n        future:\n            FirebaseFirestore.instance.collection(\'rentals\').doc(rentalId).get(),\n        builder: (context, snapshot) {\n          if (snapshot.hasError) {\n            return const Center(child: Text(\'Something went wrong\'));\n          }\n\n          if (snapshot.connectionState == ConnectionState.waiting) {\n            return const Center(child: CircularProgressIndicator());\n          }\n\n          if (!snapshot.hasData || !snapshot.data!.exists) {\n            return const Center(child: Text(\'Rental not found\'));\n          }\n\n          final data = snapshot.data!.data()! as Map<String, dynamic>;\n\n          return Padding(\n            padding: const EdgeInsets.all(16.0),\n            child: Column(\n              crossAxisAlignment: CrossAxisAlignment.start,\n              children: [\n                Text(\'Make: ${data[\\\'vehicle\\\'][\\\'make\\\'] ?? \\\'N/A\\\'}\'),\n                Text(\'Model: ${data[\\\'vehicle\\\'][\\\'model\\\'] ?? \\\'N/A\\\'}\'),\n                Text(\n                    \'Price per day: \${data[\\\'pricePerDay\\\'] ?? \\\'N/A\\\'}\'),\n                ElevatedButton(\n                  onPressed: () {\n                    Navigator.push(\n                      context,\n                      MaterialPageRoute(\n                        builder: (context) =>\n                            RentalCheckoutScreen(rentalId: rentalId),\n                      ),\n                    );\n                  },\n                  child: const Text(\'Book\'),\n                ),\n              ],\n            ),\n          );\n        },\n      ),\n    );\n  }\n}\n
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class RentalDetailScreen extends StatelessWidget {
+  final String rentalId;
+  const RentalDetailScreen({super.key, required this.rentalId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Rental Details')),
+      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        future: FirebaseFirestore.instance.collection('rentals').doc(rentalId).get(),
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snap.hasData || !snap.data!.exists) {
+            return const Center(child: Text('Rental not found'));
+          }
+          final data = snap.data!.data()!;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(data['title'] ?? 'Vehicle', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text('Price per day: £${(data['pricePerDay'] ?? 0).toString()}'),
+              const SizedBox(height: 8),
+              Text('Make: ${data['make'] ?? '-'}  Model: ${data['model'] ?? '-'}'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  // TODO: Navigate to checkout with this rentalId
+                },
+                child: const Text('Book now'),
+              )
+            ],
+          );
+        },
+      ),
+    );
+  }
+}

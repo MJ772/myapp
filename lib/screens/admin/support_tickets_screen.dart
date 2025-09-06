@@ -1,6 +1,5 @@
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:myapp/models/ticket.dart';
 
 class SupportTicketsScreen extends StatelessWidget {
@@ -8,66 +7,40 @@ class SupportTicketsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Support Tickets'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Open'),
-              Tab(text: 'Resolved'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildTicketsList(false),
-            _buildTicketsList(true),
-          ],
-        ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('All Support Tickets')),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('support_tickets')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final docs = snapshot.data?.docs ?? const [];
+          final tickets = docs.map((d) => Ticket.fromFirestore(d)).toList();
+
+          if (tickets.isEmpty) {
+            return const Center(child: Text('No tickets'));
+          }
+
+          return ListView.builder(
+            itemCount: tickets.length,
+            itemBuilder: (_, i) {
+              final t = tickets[i];
+              return ListTile(
+                title: Text(t.subject),
+                subtitle: Text(t.openedBy),
+                trailing: Icon(
+                  t.isResolved ? Icons.check_circle : Icons.pending,
+                  color: t.isResolved ? Colors.green : Colors.orange,
+                ),
+              );
+            },
+          );
+        },
       ),
-    );
-  }
-
-  Widget _buildTicketsList(bool isResolved) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('tickets')
-          .where('isResolved', isEqualTo: isResolved)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(child: Text('Something went wrong'));
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No ${isResolved ? 'resolved' : 'open'} tickets'));
-        }
-
-        return ListView(
-          children: snapshot.data!.docs.map((DocumentSnapshot document) {
-            final ticket = Ticket.fromFirestore(document);
-
-            return ListTile(
-              title: Text(ticket.subject),
-              subtitle: Text(ticket.message),
-              trailing: !isResolved
-                  ? ElevatedButton(
-                      onPressed: () {
-                        document.reference.update({'isResolved': true});
-                      },
-                      child: const Text('Resolve'),
-                    )
-                  : null,
-            );
-          }).toList(),
-        );
-      },
     );
   }
 }

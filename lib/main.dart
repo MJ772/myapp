@@ -10,7 +10,7 @@ import 'package:myapp/screens/admin/admin_dashboard.dart';
 import 'package:myapp/screens/placeholder/chauffeur_dashboard.dart';
 import 'package:myapp/screens/placeholder/courier_dashboard.dart';
 import 'package:myapp/screens/placeholder/customer_submission_screen.dart';
-import 'package:myapp/screens/placeholder/support_overview_screen.dart';
+import 'package:myapp/screens/support/support_overview_screen.dart';
 import 'package:myapp/screens/vendor/garage_dashboard.dart';
 import 'package:myapp/services/auth_service.dart';
 import 'package:myapp/utils/constants.dart';
@@ -80,9 +80,10 @@ class _AuthGate extends StatelessWidget {
             switch (role) {
               case 'admin':
                 return const AdminDashboard();
+              case 'vendor':
               case 'garage':
                 return pendingOr(
-                    const GarageDashboard(), userData['vendorApproved']);
+                    const GarageDashboardScreen(), userData['vendorApproved']);
               case 'chauffeur':
                 return pendingOr(
                     const ChauffeurDashboard(), userData['chauffeurApproved']);

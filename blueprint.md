@@ -68,3 +68,60 @@ The app uses a modern, clean design with a consistent color scheme and typograph
 
 6.  **Update `Reservation` Model (`lib/models/reservation.dart`)**:
     *   Ensure the `vendorId` is included in the `toMap` method so it is correctly saved to Firestore.
+
+## Next Milestones (MVP Close-Out)
+
+### N1 — Vendor Reservation Detail & Confirmation
+**Goal:** Allow vendors to confirm/decline pending reservations and assign a chauffeur.
+**Deliverables:**
+- `lib/screens/vendor/reservation_detail_screen.dart`
+- Vendor list of pending reservations (query `collectionGroup('reservations')` by `vendorId == uid`, `status == 'pending'`).
+- Actions: Confirm → `status:'confirmed'`; Decline → `status:'cancelled'`; Assign chauffeur → set `chauffeurAssignment.driverId`.
+**Acceptance:**
+- Vendor updates are reflected immediately for the customer.
+- Firestore rules prevent changing `customerId/startDate/endDate/vendorId`.
+
+### N2 — Chauffeur Offer & Assignment
+**Goal:** Turn confirmed chauffeured bookings into actionable jobs.
+**Deliverables:**
+- On vendor confirm (chauffeured): create `users/{driverId}/chauffeur_jobs/{jobId}` with `status:'offer'`.
+- Chauffeur Inbox → Accept/Decline; vendor marks reservation as `assigned` when accepted.
+**Acceptance:**
+- Chauffeur state changes propagate to reservation fields; rules allow only assignment status updates for the chauffeur.
+
+### N3 — Support Ticket Detail & Resolve
+**Goal:** Operational support tooling.
+**Deliverables:**
+- `lib/screens/support/ticket_detail_screen.dart` with resolve toggle (support/admin only).
+- SupportOverview shows all tickets for support/admin; “My Tickets” for non-support users.
+**Acceptance:**
+- Changing `isResolved` updates list state without errors.
+
+### N4 — Admin Approvals (Staging Flip)
+**Goal:** Prove production approval gates.
+**Steps:**
+- Set `kBypassRoleApprovals=false`, `kAutoApproveNonCustomer=false` (staging).
+- Test new signups for Garage/Chauffeur/Courier → Pending → Approve → Dashboard.
+**Acceptance:**
+- All three roles require admin approval before dashboard access; no rule violations.
+
+### N5 — Garage Services (Customer-Side)
+**Goal:** Make Services discoverable and bookable.
+**Deliverables:**
+- `services_list_screen.dart`, `service_detail_screen.dart`, `service_booking_screen.dart`
+- Collection: `service_bookings` with `{vendorId, customerId, serviceId, startDate, status, createdAt}`
+- Rules: mirror reservations constraints (vendor/customer/admin scopes).
+**Acceptance:**
+- Customer can create a service booking; vendor can view their bookings.
+
+### N6 — Profile & Settings
+**Goal:** Basic user self-service.
+**Deliverables:**
+- `account/profile_screen.dart` to update displayName/photo.
+- Storage write for avatar (optional), secure rules: users can only edit safe fields.
+**Acceptance:**
+- Profile updates persist; no role/approval edits possible by users.
+
+### Notes on Architecture Alignment
+- **Router:** For MVP, we keep `Navigator` + `_AuthGate`. Post-MVP we may migrate to `go_router` for declarative routes.
+- **Naming:** Consolidate to `lib/screens/vendor/*` (replace any lingering `garage/*` imports as we touch files).

@@ -1,4 +1,5 @@
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/services/auth_service.dart';
 import 'package:myapp/utils/dev_utils.dart';
@@ -46,8 +47,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
-                    await _authService.signInWithEmailAndPassword(
-                        _email, _password);
+                    try {
+                      await _authService.signInWithEmailAndPassword(
+                          _email, _password);
+                    } on FirebaseAuthException catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text('Login Failed: ${e.message}')),
+                      );
+                    }
                   }
                 },
                 child: const Text('Login'),
@@ -62,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ElevatedButton(
                 onPressed: () async {
                   await seedDevData();
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Dev data seeded!')),
                   );
@@ -72,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ElevatedButton(
                 onPressed: () async {
                   await createDevUsers();
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Dev users created!')),
                   );
