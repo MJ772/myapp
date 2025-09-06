@@ -1,7 +1,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:myapp/models/repair_request.dart';
 import 'package:myapp/services/repair_request_service.dart';
 
 class MapViewScreen extends StatefulWidget {

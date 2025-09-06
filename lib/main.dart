@@ -55,7 +55,7 @@ class _AuthGate extends StatelessWidget {
           return const LoginScreen();
         }
 
-        return FutureBuilder<DocumentSnapshot>(
+        return FutureBuilder<DocumentSnapshot?>(
           future: AuthService().getUserDoc(snapshot.data!.uid),
           builder: (context, userSnapshot) {
             if (userSnapshot.connectionState == ConnectionState.waiting) {
@@ -64,7 +64,7 @@ class _AuthGate extends StatelessWidget {
               );
             }
 
-            if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+            if (!userSnapshot.hasData || userSnapshot.data == null || !userSnapshot.data!.exists) {
               return const LoginScreen(); // Should not happen
             }
 

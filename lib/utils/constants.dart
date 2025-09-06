@@ -1,4 +1,9 @@
-const Set<String> kAdminEmails = {'emjadulhoqu3@gmail.com'}; // update as needed
+// lib/utils/constants.dart
+const Set<String> kAdminEmails = {
+  'emjadulhoqu3@gmail.com',
+  'mandemmotorsltd@gmail.com',
+};
+
 const Set<String> kAdminUids = {
   // optional hard lock UID(s)
   // 'your-admin-uid',

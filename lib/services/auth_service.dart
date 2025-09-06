@@ -39,8 +39,14 @@ class AuthService {
     try {
       final DocumentSnapshot doc =
           await _firestore.collection('users').doc(uid).get();
-      return doc.get('role');
-    } catch (e) {
+
+      if (!doc.exists) {
+        print('User document does not exist for uid $uid');
+        return null;
+      }
+
+      final data = doc.data() as Map<String, dynamic>?;
+      return data?['role'] as String?;    } catch (e) {
       print('Error getting user role: $e');
       return null;
     }

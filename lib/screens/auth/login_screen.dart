@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:myapp/services/auth_service.dart';
+import 'package:myapp/utils/dev_utils.dart';
+import 'package:myapp/utils/dev_user_creation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -55,7 +57,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   Navigator.pushNamed(context, '/signup');
                 },
                 child: const Text('Don\'t have an account? Sign up'),
-              )
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  await seedDevData();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Dev data seeded!')),
+                  );
+                },
+                child: const Text('Seed Dev Data'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  await createDevUsers();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Dev users created!')),
+                  );
+                },
+                child: const Text('Create Dev Users'),
+              ),
             ],
           ),
         ),

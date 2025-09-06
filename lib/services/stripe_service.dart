@@ -23,7 +23,7 @@ class StripeService {
       });
 
       final data = response.data;
-      if (data != null && data.containsKey('accountLinkUrl')) {
+      if (data.containsKey('accountLinkUrl')) {
         // In a real app, you would open this URL in a webview or browser.
         // For this example, we'll just print the URL.
         print('Stripe Account Onboarding URL: ${data['accountLinkUrl']}');

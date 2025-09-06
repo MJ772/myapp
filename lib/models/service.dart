@@ -17,7 +17,11 @@ class Service {
 
   // Factory constructor for creating a Service from a Firestore document
   factory Service.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+   final data = doc.data() as Map<String, dynamic>?;
+    if (data == null) {
+      throw StateError('Missing service data for document ${doc.id}');
+    }
+    
     return Service(
       id: doc.id,
       garageId: data['garageId'] ?? '',
